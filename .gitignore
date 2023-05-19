@@ -16,3 +16,7 @@ yarn-error.log
 /.idea
 /.vscode
 laravel-echo-server.json
+laravel-echo-server.sqlite
+laravel-echo-server.lock
+```
+```
