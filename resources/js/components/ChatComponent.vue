@@ -28,9 +28,12 @@ export default {
             this.messages = response.data;
         });
 
-        window.Echo.channel("chat").listen(".MessageSent", (e) => {
-            this.messages.push(e.message);
-        });
+        window.Echo.channel("laravel_database_chat").listen(
+            ".message.sent",
+            (data) => {
+                this.messages.push(data.message);
+            }
+        );
     },
 };
 </script>
