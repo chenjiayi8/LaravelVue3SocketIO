@@ -1,12 +1,9 @@
 <?php
-// app/Events/MessageSent.php
-
 namespace App\Events;
 
-use Illuminate\Broadcasting\Channel;
+use App\Models\Message;
 use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Broadcasting\PresenceChannel;
-use Illuminate\Broadcasting\PrivateChannel;
+use Illuminate\Broadcasting\Channel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
@@ -20,9 +17,10 @@ class MessageSent implements ShouldBroadcast
     /**
      * Create a new event instance.
      *
+     * @param  Message  $message
      * @return void
      */
-    public function __construct($message)
+    public function __construct(Message $message)
     {
         $this->message = $message;
     }
@@ -37,5 +35,13 @@ class MessageSent implements ShouldBroadcast
         return new Channel('chat');
     }
 
-
+    /**
+     * The event's broadcast name.
+     *
+     * @return string
+     */
+    public function broadcastAs()
+    {
+        return 'message.sent';
+    }
 }
