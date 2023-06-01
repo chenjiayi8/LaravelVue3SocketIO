@@ -35,5 +35,9 @@ export default {
             }
         );
     },
+
+    beforeDestroy() {
+        window.Echo.leaveChannel("laravel_database_chat");
+    },
 };
 </script>
