@@ -36,7 +36,7 @@ RUN apt install git curl wget lsof -y
 RUN apt purge apache2 -y
 RUN add-apt-repository ppa:ondrej/php -y 
 RUN apt install php8.1 -y
-RUN apt install php8.1-{cli,common,curl,zip,gd,mysql,xml,mbstring,intl,fpm,redis} -y
+RUN apt install php8.1-{cli,common,curl,zip,gd,mysql,xml,mbstring,intl,fpm,redis,dev} -y
 RUN apt -y autoclean
 
 # Install composer
@@ -45,6 +45,7 @@ RUN php -r "readfile('http://getcomposer.org/installer');" | php -- --install-di
 
 # debug tools
 RUN apt install nmap -y
+RUN apt install nmap redis -y
 
 # permissions and logs
 RUN mkdir -p /run/php/
@@ -77,7 +78,27 @@ ENV PATH $NVM_DIR/versions/node/v$NODE_VERSION/bin:$PATH
 
 RUN npm install -g laravel-echo-server pm2
 
-WORKDIR /var/www/html/chat
+USER root
+# Install Xdebug
+RUN apt install php8.1-xdebug iproute2 -y
+# RUN pecl install xdebug
 
-EXPOSE 9000
+# enable xdebug
+# RUN echo > /etc/php/8.1/cli/php.ini
+# RUN echo 'zend_extension=xdebug.so' >> /etc/php/8.1/cli/php.ini \
+#     && echo 'xdebug.mode=debug' >> /etc/php/8.1/cli/php.ini \
+#     && echo 'xdebug.start_with_request=yes' >> /etc/php/8.1/cli/php.ini \
+#     && echo 'xdebug.client_host=host.docker.internal' >> /etc/php/8.1/cli/php.ini \
+#     && echo 'xdebug.client_port=9003' >> /etc/php/8.1/cli/php.ini \
+#     && echo 'xdebug.log=/tmp/xdebug.log' >> /etc/php/8.1/cli/php.ini
+RUN echo 'xdebug.mode=debug' >> /etc/php/8.1/cli/php.ini \
+    && echo 'xdebug.client_host=localhost' >> /etc/php/8.1/cli/php.ini \
+    && echo 'xdebug.client_port=9003' >> /etc/php/8.1/cli/php.ini \
+    && echo 'xdebug.start_with_request=yes' >> /etc/php/8.1/cli/php.ini
+
+
+RUN apt install redis -y
+
+USER ubuntu
+WORKDIR /var/www/html/chat
 
