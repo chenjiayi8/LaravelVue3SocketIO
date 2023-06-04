@@ -1,0 +1,111 @@
+version: "3"
+
+services:
+    chat:
+        build:
+            context: .
+            dockerfile: ./docker/web/Dockerfile
+            args:
+                - DOCKER_UID=${DOCKER_UID}
+                - DOCKER_GID=${DOCKER_GID}
+        user: "${DOCKER_UID}:${DOCKER_GID}"
+        container_name: chat
+        restart: unless-stopped
+        tty: true
+        volumes:
+            - .:/var/www/html/chat
+            - ./docker/web/php-fpm.conf:/usr/local/etc/php-fpm.conf
+
+        command: bash -c './docker/web/entrypoint.sh'
+        depends_on:
+            - chat_mysql
+        networks:
+            - frontend
+            - backend
+
+    chat_mysql:
+        image: mysql:8.0
+        container_name: chat_mysql
+        restart: unless-stopped
+        tty: true
+        user: "${DOCKER_UID}:${DOCKER_GID}"
+        environment:
+            MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+            MYSQL_DATABASE: ${DB_DATABASE}
+            MYSQL_USER: ${DB_USERNAME}
+            MYSQL_PASSWORD: ${DB_PASSWORD}
+        volumes:
+            - ./mysql/data:/var/lib/mysql
+        networks:
+            - backend
+
+    chat_redis:
+        image: redis:latest
+        container_name: chat_redis
+        restart: unless-stopped
+        tty: true
+        user: "${DOCKER_UID}:${DOCKER_GID}"
+        volumes:
+            - ./redis/data:/data
+        networks:
+            - backend
+
+    chat_adminer:
+        image: adminer
+        container_name: chat_adminer
+        restart: unless-stopped
+        tty: true
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.chat_adminer.rule=(Host(`localhost.com`) && Pathprefix(`/adminer`))"
+            - "traefik.http.routers.chat_adminer.entrypoints=web"
+        networks:
+            - frontend
+            - backend
+
+    chat_nginx:
+        image: nginx:latest
+        container_name: chat_nginx
+        restart: unless-stopped
+        tty: true
+        volumes:
+            - .:/var/www/html/chat
+            - ./docker/nginx/default.conf:/etc/nginx/nginx.conf
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.chat_nginx.rule=Host(`localhost.com`)"
+            - "traefik.http.routers.chat_nginx.entrypoints=web"
+
+        networks:
+            - frontend
+
+    traefik:
+        image: traefik:latest
+        container_name: traefik
+        command: --log.level=DEBUG
+            --accesslog=true
+            --api.insecure=true
+            --api.dashboard=true
+            --providers.docker=true
+            --providers.docker.exposedbydefault=true
+            --providers.docker.network=frontend
+            --entryPoints.web.address=:80
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.traefik.rule=(Host(`localhost.com`) && (Pathprefix(`/api/`) || Pathprefix(`/dashboard/`)))"
+            - "traefik.http.routers.traefik.entryPoints=web"
+        ports:
+            - "80:80"
+        restart: unless-stopped
+        tty: true
+        depends_on:
+            - chat
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+        networks:
+            - frontend
+networks:
+    frontend:
+        name: frontend
+    backend:
+        name: backend
