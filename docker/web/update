@@ -1,0 +1,52 @@
+#!/bin/bash
+
+# container variables
+APP_DIR="${PWD}"
+VERSION_NUMBER=$1
+NEW_RELEASE_DIR="$APP_DIR/releases/$VERSION_NUMBER"
+SHARED_STORAGE_DIR="$APP_DIR/storage"
+
+# permissions for scripts
+chmod +x ./docker/web/*
+
+# creates a symbolic link for the .env file
+ln -s ../../.env $NEW_RELEASE_DIR/.env
+
+# Navigate into the new release directory
+cd $NEW_RELEASE_DIR
+
+# Install dependencies
+composer install --no-dev --optimize-autoloader
+npm install
+
+# Build the project
+npm run production
+
+# Migrate the database
+php artisan migrate --force
+
+# Remove the existing storage directory and replace it with a symbolic link to the shared storage directory
+rm -rf storage
+ln -s ../../storage storage
+
+# Link storage
+php artisan storage:link
+
+# Update the .env file
+sed -i "s/APP_VERSION=.*/APP_VERSION=$VERSION_NUMBER/" $APP_DIR/.env 
+
+# optimize
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+php artisan optimize
+
+
+# Remove old releases
+cd $APP_DIR/releases
+ls -t | tail -n +3 | xargs rm -rf
+
+
+# Switch the symbolic link to point to the new release
+cd $APP_DIR
+ln -sfn releases/$VERSION_NUMBER current
